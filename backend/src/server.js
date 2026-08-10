@@ -20,7 +20,19 @@ const app = express();
 
 connectDB();
 
-app.use(cors());
+const allowedOrigins = [
+  "http://localhost:5173",
+  "http://localhost:5174",
+  "https://smart-bus-frontend-lyart.vercel.app",
+  "https://smart-bus-driver.vercel.app/",
+];
+
+app.use(
+  cors({
+    origin: allowedOrigins,
+    credentials: true,
+  })
+);
 app.use(express.json());
 
 app.get("/", (req, res) => {
@@ -50,7 +62,8 @@ const httpServer = http.createServer(app);
 // Attach Socket.IO to that same HTTP server
 const io = new Server(httpServer, {
   cors: {
-    origin: "*", // allow any frontend to connect for now — we'll restrict this at deployment
+    origin: allowedOrigins,
+    credentials: true,
   },
 });
 
