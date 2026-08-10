@@ -102,11 +102,82 @@ const LiveMap = ({ routeId, focusedBusId }) => {
     };
   }, []);
 
-  const routeLinePositions = stops
-    .filter((stopEntry) => stopEntry.stop && stopEntry.stop.location)
-    .slice()
-    .sort((a, b) => a.order - b.order)
-    .map((stopEntry) => toLeafletCoords(stopEntry.stop.location.coordinates));
+  // frontend/src/components/LiveMap.jsx
+
+import { useEffect, useState } from "react";
+import {
+  MapContainer,
+  TileLayer,
+  Marker,
+  Popup,
+  Polyline,
+  useMap,
+} from "react-leaflet";
+import socket from "../services/socket";
+import api from "../services/api";
+import { toLeafletCoords } from "../services/geoHelpers";
+import { busIcon, stopIcon } from "../services/mapIcons";
+import { getFullRouteLine } from "../services/routingService";
+
+const DEFAULT_CENTER = [17.385, 78.4867];
+const DEFAULT_ZOOM = 13;
+
+const MapFocusController = ({ focusedBusId, liveBuses }) => {
+  const map = useMap();
+
+  useEffect(() => {
+    if (focusedBusId && liveBuses[focusedBusId]) {
+      const position = toLeafletCoords(liveBuses[focusedBusId].coordinates);
+      map.flyTo(position, 15, { duration: 1 });
+    }
+  }, [focusedBusId, liveBuses, map]);
+
+  return null;
+};
+
+const LiveMap = ({ routeId, focusedBusId }) => {
+  const [stops, setStops] = useState([]);
+  const [liveBuses, setLiveBuses] = useState({});
+  const [routeLinePositions, setRouteLinePositions] = useState([]);
+  const [routeLoading, setRouteLoading] = useState(false);
+
+  useEffect(() => {
+    const fetchRouteStops = async () => {
+      try {
+        const response = await api.get(`/routes/${routeId}`);
+        setStops(response.data.route.stops || []);
+      } catch (error) {
+        console.error("Failed to fetch route stops:", error);
+      }
+    };
+
+    if (routeId) {
+      fetchRouteStops();
+    }
+  }, [routeId]);
+
+  // NEW: whenever stops change, fetch the actual road-following path
+  useEffect(() => {
+    const buildRoadRoute = async () => {
+      const validStops = stops
+        .filter((s) => s.stop && s.stop.location)
+        .slice()
+        .sort((a, b) => a.order - b.order);
+
+      if (validStops.length < 2) {
+        setRouteLinePositions([]);
+        return;
+      }
+
+      setRouteLoading(true);
+      const coordinates = validStops.map((s) => s.stop.location.coordinates);
+      const roadLine = await getFullRouteLine(coordinates);
+      setRouteLinePositions(roadLine);
+      setRouteLoading(false);
+    };
+
+    buildRoadRoute();
+  }, [stops]);
 
   return (
     <MapContainer
@@ -122,7 +193,12 @@ const LiveMap = ({ routeId, focusedBusId }) => {
       <MapFocusController focusedBusId={focusedBusId} liveBuses={liveBuses} />
 
       {routeLinePositions.length > 1 && (
-        <Polyline positions={routeLinePositions} color="#2563eb" weight={4} />
+        <Polyline
+          positions={routeLinePositions}
+          color="#2563eb"
+          weight={5}
+          opacity={routeLoading ? 0.4 : 0.9}
+        />
       )}
 
       {stops.map((stopEntry) => {
