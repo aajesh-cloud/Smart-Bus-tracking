@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Socket.IO Test Client</title>
+</head>
+<body>
+  <h2>Live Bus Tracking — Test Client</h2>
+  <p>Bus ID to track: <input type="text" id="busIdInput" placeholder="Paste busId here" style="width: 300px;" /></p>
+  <button onclick="joinRoom()">Join Bus Room</button>
+  <button onclick="joinAdmin()">Join Admin Room</button>
+
+  <h3>Live Events:</h3>
+  <pre id="log" style="background:#f0f0f0; padding: 10px; height: 400px; overflow-y: scroll;"></pre>
+
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+  <script>
+    const socket = io("http://localhost:5000");
+
+    const log = (message) => {
+      const logBox = document.getElementById("log");
+      logBox.textContent += message + "\n\n";
+      logBox.scrollTop = logBox.scrollHeight;
+    };
+
+    socket.on("connect", () => {
+      log("✅ Connected to server. Socket ID: " + socket.id);
+    });
+
+    socket.on("disconnect", () => {
+      log("❌ Disconnected from server");
+    });
+
+    function joinRoom() {
+      const busId = document.getElementById("busIdInput").value.trim();
+      if (!busId) {
+        alert("Please paste a busId first");
+        return;
+      }
+      socket.emit("joinBusRoom", busId);
+      log("📡 Requested to join room for bus: " + busId);
+    }
+
+    function joinAdmin() {
+      socket.emit("joinAdminRoom");
+      log("📡 Requested to join admin room");
+    }
+
+    socket.on("tripStarted", (data) => {
+      log("🚌 TRIP STARTED:\n" + JSON.stringify(data, null, 2));
+    });
+
+    socket.on("tripStopped", (data) => {
+      log("🛑 TRIP STOPPED:\n" + JSON.stringify(data, null, 2));
+    });
+
+    socket.on("locationUpdate", (data) => {
+      log("📍 LOCATION UPDATE:\n" + JSON.stringify(data, null, 2));
+    });
+
+    // NEW: listen for ETA updates
+    socket.on("etaUpdate", (data) => {
+      log("⏱️ ETA UPDATE:\n" + JSON.stringify(data, null, 2));
+    });
+
+    // NEW: listen for near-stop alerts
+    socket.on("busNearStop", (data) => {
+      log("🔔 BUS NEAR STOP:\n" + JSON.stringify(data, null, 2));
+    });
+  </script>
+</body>
+</html>
