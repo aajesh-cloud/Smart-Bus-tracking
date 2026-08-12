@@ -41,3 +41,29 @@ A full-stack, real-time college bus tracking system built with the MERN stack (M
 | Deployment | Render (backend), Vercel (frontend + driver app) |
 
 ## Project Structure
+## Quick Start
+
+See [`docs/Installation-Guide.md`](docs/Installation-Guide.md) for full setup instructions.
+
+```bash
+# Backend
+cd backend && npm install && npm run dev
+
+# Frontend (new terminal)
+cd frontend && npm install && npm run dev
+
+# Driver App (new terminal)
+cd mobile-driver && npm install && npm run dev
+```
+
+## Documentation
+
+- [API Documentation](docs/API-Documentation.md)
+- [Installation Guide](docs/Installation-Guide.md)
+- [Architecture Overview](docs/Architecture.md)
+- [Database Design](docs/Database-Design.md)
+- [Project Report](docs/Project-Report.md)
+
+## Author
+
+Built as a college project — full-stack development from scratch, covering backend APIs, real-time systems, authentication, mapping, and deployment.

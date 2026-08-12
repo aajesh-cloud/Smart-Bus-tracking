@@ -1,0 +1,9 @@
+{
+  "version": 2,
+  "buildCommand": "cd mobile-driver && npm install && npm run build",
+  "outputDirectory": "mobile-driver/dist",
+  "framework": "vite",
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}
