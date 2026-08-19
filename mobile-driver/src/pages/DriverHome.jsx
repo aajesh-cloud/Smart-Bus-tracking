@@ -1,6 +1,4 @@
-// mobile-driver/src/pages/DriverHome.jsx
-
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useDriverAuth } from "../context/DriverAuthContext";
 import { useNavigate } from "react-router-dom";
 import {
@@ -23,9 +21,11 @@ const DriverHome = () => {
   const [selectedRouteId, setSelectedRouteId] = useState("");
   const [error, setError] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
+  const [shakeRoute, setShakeRoute] = useState(false);
+  const startBtnRef = useRef(null);
+  const stopBtnRef = useRef(null);
+  const logoutBtnRef = useRef(null);
 
-  // Pass the ongoing trip's ID (or null) — GPS tracking automatically
-  // starts/stops in sync with this value changing
   const { gpsStatus, gpsError, lastSentAt } = useGpsTracking(
     ongoingTrip?._id || null
   );
@@ -56,18 +56,42 @@ const DriverHome = () => {
     loadInitialState();
   }, []);
 
-  const handleLogout = () => {
-    logout();
-    navigate("/login");
+  const createRipple = (e, ref) => {
+    if (!ref?.current) return;
+    const btn = ref.current;
+    const circle = document.createElement("span");
+    const diameter = Math.max(btn.clientWidth, btn.clientHeight);
+    const radius = diameter / 2;
+    const rect = btn.getBoundingClientRect();
+    circle.style.width = circle.style.height = `${diameter}px`;
+    circle.style.left = `${e.clientX - rect.left - radius}px`;
+    circle.style.top = `${e.clientY - rect.top - radius}px`;
+    circle.className = "ripple-ink";
+    const existing = btn.querySelector(".ripple-ink");
+    if (existing) existing.remove();
+    btn.appendChild(circle);
+    setTimeout(() => circle.remove(), 650);
   };
 
-  const handleStartTrip = async () => {
+  const handleLogout = (e) => {
+    createRipple(e, logoutBtnRef);
+    setTimeout(() => {
+      logout();
+      navigate("/login");
+    }, 250);
+  };
+
+  const handleStartTrip = async (e) => {
+    createRipple(e, startBtnRef);
+
     if (!selectedRouteId) {
       setError("Please select a route before starting the trip.");
+      setShakeRoute(true);
       return;
     }
 
     setError("");
+    setShakeRoute(false);
     setActionLoading(true);
 
     try {
@@ -80,7 +104,9 @@ const DriverHome = () => {
     }
   };
 
-  const handleStopTrip = async () => {
+  const handleStopTrip = async (e) => {
+    createRipple(e, stopBtnRef);
+
     const confirmed = window.confirm("Are you sure you want to end this trip?");
     if (!confirmed) return;
 
@@ -100,41 +126,70 @@ const DriverHome = () => {
   if (loading) {
     return (
       <div className="mobile-page">
-        <p style={{ color: "#94a3b8" }}>Loading...</p>
+        <div className="skeleton-card fade-in-up">
+          <div className="skeleton-line w-60 h-lg" />
+          <div className="skeleton-line w-40" />
+        </div>
+        <div className="skeleton-card fade-in-up delay-1">
+          <div className="skeleton-line w-40" />
+          <div className="skeleton-line w-80" />
+          <div className="skeleton-line w-60" />
+        </div>
+        <div className="skeleton-card fade-in-up delay-2">
+          <div className="skeleton-line w-90 h-lg" />
+          <div className="skeleton-line w-40" />
+          <div className="skeleton-line w-80" />
+        </div>
       </div>
     );
   }
 
   return (
     <div className="mobile-page">
-      <div className="mobile-card" style={{ marginBottom: "16px" }}>
-        <h2>Welcome, {driver?.name}</h2>
-        <p style={{ color: "#94a3b8", marginTop: "6px", fontSize: "14px" }}>
-          License: {driver?.licenseNumber || "Not set"}
-        </p>
+      <div className="mobile-card fade-in-down">
+        <div className="driver-profile-card">
+          <div className="driver-avatar">
+            {driver?.name?.charAt(0)?.toUpperCase() || "D"}
+          </div>
+          <div className="driver-info">
+            <h2>{driver?.name || "Driver"}</h2>
+            <p>License: {driver?.licenseNumber || "Not set"}</p>
+          </div>
+          <div className="driver-badge bounce-in">
+            <span className="driver-badge-dot" />
+            Online
+          </div>
+        </div>
       </div>
 
-      {error && <div className="error-message">{error}</div>}
+      {error && (
+        <div className="error-message fade-in-up">{error}</div>
+      )}
 
       {!hasBus ? (
-        <div className="mobile-card">
-          <p style={{ color: "#f59e0b" }}>
-            ⚠️ No bus is currently assigned to you. Please contact your admin.
-          </p>
+        <div className="mobile-card warning-message assigned-bus-card fade-in-up delay-1">
+          No bus is currently assigned to you. Please contact your admin.
         </div>
       ) : (
-        <div className="mobile-card">
-          <p style={{ marginBottom: "16px" }}>
-            <strong>Your Bus:</strong> {bus.busNumber}
-          </p>
+        <div className="mobile-card assigned-bus-card fade-in-up delay-1">
+          <div className="assigned-bus-header">
+            <span className="assigned-bus-label">Your Bus</span>
+            <span className="assigned-bus-label">🚌 Assigned</span>
+          </div>
+          <div className="assigned-bus-number">{bus?.busNumber || "—"}</div>
 
           {!ongoingTrip ? (
-            <>
-              <div className="form-group">
+            <div style={{ marginTop: "18px" }}>
+              <div className={`form-group ${shakeRoute ? "shake" : ""}`}>
                 <label>Select Route</label>
                 <select
                   value={selectedRouteId}
-                  onChange={(e) => setSelectedRouteId(e.target.value)}
+                  onChange={(e) => {
+                    setSelectedRouteId(e.target.value);
+                    if (shakeRoute) setShakeRoute(false);
+                    if (error) setError("");
+                  }}
+                  className={shakeRoute ? "has-error" : ""}
                 >
                   <option value="">— Choose a route —</option>
                   {routes.map((route) => (
@@ -146,85 +201,123 @@ const DriverHome = () => {
               </div>
 
               <button
-                className="btn-primary"
+                className="btn-success"
                 onClick={handleStartTrip}
                 disabled={actionLoading}
+                ref={startBtnRef}
               >
-                {actionLoading ? "Starting..." : "▶️ Start Trip"}
+                {actionLoading ? (
+                  <>
+                    <span className="spinner" />
+                    Starting Trip...
+                  </>
+                ) : (
+                  <>
+                    <span>▶️</span>
+                    Start Trip
+                  </>
+                )}
               </button>
-            </>
+            </div>
           ) : (
-            <>
-              <div
-                style={{
-                  backgroundColor: "#0f172a",
-                  borderRadius: "10px",
-                  padding: "16px",
-                  marginBottom: "16px",
-                }}
-              >
-                <p style={{ color: "#22c55e", fontWeight: 600, marginBottom: "8px" }}>
-                  🟢 Trip in progress
-                </p>
-                <p style={{ fontSize: "14px", color: "#94a3b8" }}>
-                  Route: {ongoingTrip.route.routeName} ({ongoingTrip.route.routeNumber})
-                </p>
-                <p style={{ fontSize: "14px", color: "#94a3b8" }}>
-                  Started: {new Date(ongoingTrip.startTime).toLocaleTimeString()}
-                </p>
+            <div style={{ marginTop: "18px" }}>
+              <div className="trip-status-panel trip-active fade-in-scale">
+                <div className="trip-status-indicator">
+                  <span className="trip-status-dot" />
+                  Trip in progress
+                </div>
+                <div className="trip-status-row" style={{ marginTop: "10px" }}>
+                  <span className="trip-status-label">Route</span>
+                  <span className="trip-status-value">
+                    {ongoingTrip.route.routeName} ({ongoingTrip.route.routeNumber})
+                  </span>
+                </div>
+                <div className="trip-status-row">
+                  <span className="trip-status-label">Started</span>
+                  <span className="trip-status-value">
+                    {new Date(ongoingTrip.startTime).toLocaleTimeString()}
+                  </span>
+                </div>
               </div>
 
-              {/* NEW: GPS status panel */}
-              <div
-                style={{
-                  backgroundColor: "#0f172a",
-                  borderRadius: "10px",
-                  padding: "16px",
-                  marginBottom: "16px",
-                }}
-              >
-                <p style={{ fontWeight: 600, marginBottom: "8px" }}>📡 GPS Status</p>
+              <div className="gps-panel fade-in-up delay-1">
+                <div className="gps-panel-title">
+                  <span className="gps-panel-title-icon">📡</span>
+                  GPS Tracking Status
+                </div>
 
                 {gpsStatus === "idle" && (
-                  <p style={{ fontSize: "14px", color: "#94a3b8" }}>Initializing...</p>
+                  <div className="gps-status-row">
+                    <div className="gps-status-icon gps-status-idle">⏳</div>
+                    <div className="gps-status-text">
+                      Initializing...
+                      <span className="meta">Preparing location tracker</span>
+                    </div>
+                  </div>
                 )}
 
                 {gpsStatus === "tracking" && (
-                  <p style={{ fontSize: "14px", color: "#22c55e" }}>
-                    ✅ Actively tracking
-                    {lastSentAt && (
-                      <span style={{ color: "#94a3b8" }}>
-                        {" "}
-                        — last sent {lastSentAt.toLocaleTimeString()}
+                  <div className="gps-status-row">
+                    <div className="gps-status-icon gps-status-tracking">✅</div>
+                    <div className="gps-status-text">
+                      <span style={{ color: "#86efac", fontWeight: 600 }}>
+                        Actively tracking
                       </span>
-                    )}
-                  </p>
+                      {lastSentAt && (
+                        <span className="meta">
+                          Last sent {lastSentAt.toLocaleTimeString()}
+                        </span>
+                      )}
+                    </div>
+                  </div>
                 )}
 
                 {gpsStatus === "error" && (
-                  <p style={{ fontSize: "14px", color: "#ef4444" }}>⚠️ {gpsError}</p>
+                  <div className="gps-status-row">
+                    <div className="gps-status-icon gps-status-error">⚠️</div>
+                    <div className="gps-status-text">
+                      <span style={{ color: "#fca5a5" }}>{gpsError}</span>
+                      <span className="meta">
+                        Please enable location services in your browser
+                      </span>
+                    </div>
+                  </div>
                 )}
               </div>
 
               <button
-                className="btn-primary btn-danger"
+                className="btn-danger"
                 onClick={handleStopTrip}
                 disabled={actionLoading}
+                ref={stopBtnRef}
               >
-                {actionLoading ? "Stopping..." : "⏹️ Stop Trip"}
+                {actionLoading ? (
+                  <>
+                    <span className="spinner" />
+                    Stopping...
+                  </>
+                ) : (
+                  <>
+                    <span>⏹️</span>
+                    Stop Trip
+                  </>
+                )}
               </button>
-            </>
+            </div>
           )}
         </div>
       )}
 
-      <button
-        className="btn-primary"
-        style={{ backgroundColor: "transparent", border: "1px solid #334155", marginTop: "16px" }}
-        onClick={handleLogout}
-      >
-        Logout
-      </button>
+      <div className="logout-btn-wrap fade-in-up delay-2">
+        <button
+          className="btn-outline"
+          onClick={handleLogout}
+          ref={logoutBtnRef}
+        >
+          <span>🚪</span>
+          Logout
+        </button>
+      </div>
     </div>
   );
 };

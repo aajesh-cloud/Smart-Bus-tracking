@@ -163,7 +163,7 @@ const LiveMap = ({ routeId, focusedBusId }) => {
         <Marker
           key={bus.busId}
           position={toLeafletCoords(bus.coordinates)}
-          icon={busIcon}
+          icon={busIcon(bus.busId === focusedBusId)}
         >
           <Popup>
             <strong>{bus.busNumber}</strong>

@@ -1,5 +1,3 @@
-// frontend/src/components/NotificationBell.jsx
-
 import { useState, useEffect, useRef } from "react";
 import api from "../services/api";
 import socket from "../services/socket";
@@ -8,12 +6,17 @@ const NotificationBell = () => {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
+  const [wiggle, setWiggle] = useState(false);
   const dropdownRef = useRef(null);
+  const prevUnreadRef = useRef(0);
 
   const fetchNotifications = async () => {
     try {
       const response = await api.get("/notifications");
       setNotifications(response.data.notifications);
+      const unread = (response.data.notifications || []).filter((n) => !n.read).length;
+      setUnreadCount(unread);
+      prevUnreadRef.current = unread;
     } catch (error) {
       console.error("Failed to fetch notifications:", error);
     }
@@ -22,20 +25,22 @@ const NotificationBell = () => {
   useEffect(() => {
     fetchNotifications();
 
-    // Listen for real-time "bus near stop" events, and prepend them
-    // to our list immediately, incrementing the unread badge
     const handleBusNearStop = (data) => {
       setNotifications((prev) => [
         {
-          _id: `temp-${Date.now()}`, // temporary key until next real fetch
+          _id: `temp-${Date.now()}`,
           message: data.message,
           createdAt: new Date().toISOString(),
           bus: { busNumber: "" },
           stop: { stopName: data.stopName },
+          read: false,
         },
         ...prev,
       ]);
-      setUnreadCount((prev) => prev + 1);
+      setUnreadCount((prev) => {
+        const next = prev + 1;
+        return next;
+      });
     };
 
     socket.on("busNearStop", handleBusNearStop);
@@ -45,7 +50,16 @@ const NotificationBell = () => {
     };
   }, []);
 
-  // Close the dropdown when clicking outside it
+  useEffect(() => {
+    if (unreadCount > prevUnreadRef.current) {
+      setWiggle(true);
+      const t = setTimeout(() => setWiggle(false), 900);
+      prevUnreadRef.current = unreadCount;
+      return () => clearTimeout(t);
+    }
+    prevUnreadRef.current = unreadCount;
+  }, [unreadCount]);
+
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
@@ -59,7 +73,7 @@ const NotificationBell = () => {
   const handleToggle = () => {
     setIsOpen((prev) => !prev);
     if (!isOpen) {
-      setUnreadCount(0); // mark as "read" when opened
+      setUnreadCount(0);
     }
   };
 
@@ -72,82 +86,60 @@ const NotificationBell = () => {
     <div ref={dropdownRef} style={{ position: "relative" }}>
       <button
         onClick={handleToggle}
-        style={{
-          background: "none",
-          border: "none",
-          fontSize: "22px",
-          cursor: "pointer",
-          position: "relative",
-          color: "#f1f5f9",
-        }}
+        className={`notification-bell-btn ${wiggle ? "bell-wiggle" : ""}`}
+        aria-label="Notifications"
       >
-        🔔
+        <span className="notification-bell-icon">🔔</span>
         {unreadCount > 0 && (
-          <span
-            style={{
-              position: "absolute",
-              top: "-4px",
-              right: "-4px",
-              backgroundColor: "#ef4444",
-              color: "#fff",
-              borderRadius: "999px",
-              fontSize: "11px",
-              fontWeight: 700,
-              padding: "1px 6px",
-              minWidth: "18px",
-            }}
-          >
-            {unreadCount}
+          <span className="notification-badge count-pop">
+            {unreadCount > 99 ? "99+" : unreadCount}
           </span>
         )}
       </button>
 
       {isOpen && (
-        <div
-          style={{
-            position: "absolute",
-            top: "36px",
-            right: 0,
-            width: "320px",
-            maxHeight: "400px",
-            overflowY: "auto",
-            backgroundColor: "#1e293b",
-            borderRadius: "10px",
-            boxShadow: "0 10px 30px rgba(0,0,0,0.4)",
-            zIndex: 100,
-          }}
-        >
-          <div
-            style={{
-              padding: "14px 16px",
-              borderBottom: "1px solid #334155",
-              fontWeight: 600,
-            }}
-          >
-            Notifications
+        <div className="notification-dropdown fade-in-up">
+          <div className="notification-header">
+            <span className="notification-title">
+              <span className="notification-title-accent">✦</span> Notifications
+            </span>
+            <span className="notification-count">{notifications.length} total</span>
           </div>
 
-          {notifications.length === 0 ? (
-            <div style={{ padding: "20px", color: "#94a3b8", fontSize: "14px" }}>
-              No notifications yet.
-            </div>
-          ) : (
-            notifications.map((notif) => (
-              <div
-                key={notif._id}
-                style={{
-                  padding: "12px 16px",
-                  borderBottom: "1px solid #334155",
-                  fontSize: "13px",
-                }}
-              >
-                <div>{notif.message}</div>
-                <div style={{ color: "#94a3b8", fontSize: "12px", marginTop: "4px" }}>
-                  {formatTime(notif.createdAt)}
-                </div>
+          <div className="notification-list">
+            {notifications.length === 0 ? (
+              <div className="notification-empty">
+                <span className="notification-empty-icon">🔕</span>
+                <p>No notifications yet.</p>
+                <p className="notification-empty-sub">
+                  Alerts will appear here when buses approach stops.
+                </p>
               </div>
-            ))
-          )}
+            ) : (
+              notifications.map((notif, i) => (
+                <div
+                  key={notif._id}
+                  className={`notification-item fade-in-up delay-${Math.min(i + 1, 8)} ${
+                    !notif.read ? "notification-item-unread" : ""
+                  }`}
+                >
+                  <div className="notification-item-icon">📍</div>
+                  <div className="notification-item-body">
+                    <div className="notification-item-message">{notif.message}</div>
+                    <div className="notification-item-meta">
+                      <span>{formatTime(notif.createdAt)}</span>
+                      {notif.stop?.stopName && (
+                        <span className="notification-item-stop">
+                          • {notif.stop.stopName}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  {!notif.read && <span className="notification-item-dot" />}
+                </div>
+              ))
+            )}
+          </div>
         </div>
       )}
     </div>

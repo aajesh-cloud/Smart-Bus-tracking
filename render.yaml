@@ -3,16 +3,25 @@ services:
     name: smart-bus-backend
     env: node
     plan: free
+    region: oregon
     buildCommand: cd backend && npm install
     startCommand: cd backend && npm start
     envVars:
+      - key: NODE_VERSION
+        value: 20.11.0
       - key: PORT
         value: 10000
       - key: MONGO_URI
         sync: false
+        description: MongoDB Atlas connection string (include /smartbustracking at end)
       - key: JWT_SECRET
         generateValue: true
       - key: JWT_EXPIRES_IN
         value: 7d
+      - key: ALLOWED_ORIGINS
+        sync: false
+        description: "Comma-separated list of allowed frontend URLs (after Vercel deploy: https://your-frontend.vercel.app, https://your-driver.vercel.app)"
     healthCheckPath: /
+    numInstances: 1
     autoDeploy: yes
+    pullPreviews: no

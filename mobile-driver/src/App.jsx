@@ -1,5 +1,3 @@
-// mobile-driver/src/App.jsx
-
 import { Routes, Route, Navigate } from "react-router-dom";
 import DriverLogin from "./pages/DriverLogin";
 import DriverHome from "./pages/DriverHome";
@@ -9,7 +7,22 @@ function App() {
   const { driver, loading } = useDriverAuth();
 
   if (loading) {
-    return <div style={{ padding: "40px", color: "#f1f5f9" }}>Loading...</div>;
+    return (
+      <div className="app-loader-wrap">
+        <div className="app-loader-bars">
+          <div className="app-loader-bar" />
+          <div className="app-loader-bar" />
+          <div className="app-loader-bar" />
+          <div className="app-loader-bar" />
+          <div className="app-loader-bar" />
+        </div>
+        <div className="app-loader-title">
+          <span className="bus">🚌</span>
+          Smart Bus Driver
+        </div>
+        <div className="app-loader-sub">Loading your dashboard...</div>
+      </div>
+    );
   }
 
   return (

@@ -1,18 +1,25 @@
-// frontend/src/services/mapIcons.js
-
 import L from "leaflet";
 
-// A custom icon for buses — using a simple emoji-based approach
-// (no image files needed, works immediately)
-export const busIcon = new L.DivIcon({
-  html: `<div style="font-size: 28px; transform: translate(-50%, -50%);">🚌</div>`,
-  className: "bus-marker-icon",
-  iconSize: [30, 30],
-});
+export const busIcon = (focused = false) =>
+  new L.DivIcon({
+    html: `
+      <div class="bus-marker-wrap ${focused ? "focused" : ""}">
+        <div class="pulse-ring"></div>
+        <div class="bus-emoji">🚌</div>
+      </div>
+    `,
+    className: "bus-marker-icon",
+    iconSize: [38, 38],
+    iconAnchor: [19, 19],
+  });
 
-// A custom icon for stops — a simple pin/dot style
 export const stopIcon = new L.DivIcon({
-  html: `<div style="font-size: 22px; transform: translate(-50%, -50%);">📍</div>`,
+  html: `
+    <div class="stop-marker-wrap">
+      <div class="stop-emoji">📍</div>
+    </div>
+  `,
   className: "stop-marker-icon",
-  iconSize: [24, 24],
+  iconSize: [26, 26],
+  iconAnchor: [13, 13],
 });

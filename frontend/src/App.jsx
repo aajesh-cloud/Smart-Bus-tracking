@@ -1,5 +1,3 @@
-// frontend/src/App.jsx
-
 import { Routes, Route, Navigate } from "react-router-dom";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -13,45 +11,59 @@ import AdminDrivers from "./pages/admin/AdminDrivers";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { useAuth } from "./context/AuthContext";
 
+const AppLoader = () => (
+  <div className="app-loader">
+    <div className="loader-bars" aria-hidden="true">
+      <span /><span /><span /><span /><span />
+    </div>
+    <div className="loader-title">
+      <span style={{ display: "inline-block", animation: "floatSoft 2.5s ease-in-out infinite" }}>🚌</span>
+      Smart Bus Tracking
+    </div>
+    <div className="loader-sub">Loading your experience</div>
+  </div>
+);
+
 function App() {
   const { loading } = useAuth();
 
   if (loading) {
-    return <div style={{ padding: "40px", color: "#f1f5f9" }}>Loading...</div>;
+    return <AppLoader />;
   }
 
   return (
-    <Routes>
-      <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
+    <div className="app-shell fade-in" style={{ minHeight: "100vh" }}>
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
 
-      <Route
-        path="/dashboard"
-        element={
-          <ProtectedRoute>
-            <Dashboard />
-          </ProtectedRoute>
-        }
-      />
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          }
+        />
 
-      {/* Nested admin routes — all share the AdminLayout sidebar/shell */}
-      <Route
-        path="/admin"
-        element={
-          <ProtectedRoute allowedRoles={["admin"]}>
-            <AdminLayout />
-          </ProtectedRoute>
-        }
-      >
-        <Route index element={<AdminOverview />} />
-        <Route path="buses" element={<AdminBuses />} />
-        <Route path="routes" element={<AdminRoutes />} />
-        <Route path="stops" element={<AdminStops />} />
-        <Route path="drivers" element={<AdminDrivers />} />
-      </Route>
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <AdminLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<AdminOverview />} />
+          <Route path="buses" element={<AdminBuses />} />
+          <Route path="routes" element={<AdminRoutes />} />
+          <Route path="stops" element={<AdminStops />} />
+          <Route path="drivers" element={<AdminDrivers />} />
+        </Route>
 
-      <Route path="/" element={<Navigate to="/login" />} />
-    </Routes>
+        <Route path="/" element={<Navigate to="/login" replace />} />
+      </Routes>
+    </div>
   );
 }
 
