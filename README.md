@@ -3,7 +3,7 @@
 A full-stack, real-time college bus tracking system built with the MERN stack (MongoDB, Express, React, Node.js) and Socket.IO. Passengers track buses live on a map, drivers share GPS from their phone, and admins manage the entire fleet through a dashboard.
 
 **Live Demo:**
-- Passenger App: https://smart-bus-frontend-lyart.vercel.app/
+- Passenger App: https://smart-bus-tracking-nine.vercel.app/
 - Driver App: https://smart-bus-driver.vercel.app/
 - Backend API: https://smart-bus-tracking-abpb.onrender.com
 
